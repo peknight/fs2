@@ -4,7 +4,11 @@ import fs2.io.file.Path
 
 package object path:
   val opt: Path = Path("/opt")
-  val varLog: Path = Path("/var/log")
+  val usr: Path = Path("/usr")
+  val usrLocal: Path = usr / "local"
+  val `var`: Path = Path("/var")
+  val varLib: Path = `var` / "lib"
+  val varLog: Path = `var` / "log"
   val bin: Path = Path("bin")
   val conf: Path = Path("conf")
   val data: Path = Path("data")
