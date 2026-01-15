@@ -3,21 +3,29 @@ package com.peknight.fs2.io.file
 import fs2.io.file.Path
 
 package object path:
-  val etc: Path = Path("/etc")
-  val opt: Path = Path("/opt")
-  val usr: Path = Path("/usr")
-  val usrLocal: Path = usr / "local"
-  val `var`: Path = Path("/var")
-  val varLib: Path = `var` / "lib"
-  val varLog: Path = `var` / "log"
+  val Root: Path = Path("/")
 
+  val etc: Path = Path("etc")
+  val opt: Path = Path("opt")
+  val usr: Path = Path("usr")
+  val `var`: Path = Path("var")
+
+  val apps: Path = Path("apps")
   val bin: Path = Path("bin")
+  val certs: Path = Path("certs")
   val conf: Path = Path("conf")
   val data: Path = Path("data")
   val lib: Path = Path("lib")
   val logs: Path = Path("logs")
-  val certs: Path = Path("certs")
+  val projects: Path = Path("projects")
+  val services: Path = Path("services")
+  val share: Path = Path("share")
 
-  val timezone: Path = Path("/etc/timezone")
-  val localtime: Path = Path("/etc/localtime")
+  val `.local`: Path = Path(".local")
+
+  val usrLocal: Path = Root / usr / "local"
+  val varLib: Path = Root / `var` / "lib"
+  val varLog: Path = Root / `var` / "log"
+  val etcTimezone: Path = Root / etc / "timezone"
+  val etcLocaltime: Path = Root / etc / "localtime"
 end path
