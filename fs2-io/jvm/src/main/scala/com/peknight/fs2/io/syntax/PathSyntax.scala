@@ -5,7 +5,8 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{Applicative, Monad}
-import fs2.io.file.{Files, Path, Permissions}
+import fs2.io.file.{Files, Flags, Path, Permissions}
+import fs2.{Compiler, Stream}
 
 import java.io.{FileInputStream, FileOutputStream, FileReader, FileWriter}
 import java.nio.file.Paths
@@ -25,6 +26,21 @@ trait PathSyntax:
       for
         _ <- createParentDirectories[F](directoryPermissions)
         _ <- Monad[F].ifM[Unit](Files[F].exists(path))(().pure[F], Files[F].createFile(path, filePermissions))
+      yield
+        ()
+    def writeFile[F[_]](stream: Stream[F, Byte], flags: Flags = Flags.Write, directoryPermissions: Option[Permissions] = None)
+                       (using Monad[F], Files[F], Compiler[F, F]): F[Unit] =
+      for
+        _ <- createParentDirectories[F](directoryPermissions)
+        _ <- stream.through(Files[F].writeAll(path, flags)).compile.drain
+      yield
+        ()
+    def writeFileIfNotExists[F[_]](stream: => Stream[F, Byte], flags: Flags = Flags.Write,
+                                   directoryPermissions: Option[Permissions] = None)
+                                  (using Monad[F], Files[F], Compiler[F, F]): F[Unit] =
+      for
+        _ <- createParentDirectories[F](directoryPermissions)
+        _ <- Monad[F].ifM[Unit](Files[F].exists(path))(().pure[F], stream.through(Files[F].writeAll(path, flags)).compile.drain)
       yield
         ()
   end extension
