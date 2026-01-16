@@ -21,8 +21,8 @@ trait PathSyntax:
       Sync[F].blocking(new FileOutputStream(path.toNioPath.toFile))
     def createParentDirectories[F[_]: {Applicative, Files}](permissions: Option[Permissions] = None): F[Unit] =
       path.parent.fold(().pure[F])(parent => Files[F].createDirectories(parent, permissions))
-    def createFileIfNotExists[F[_]: {Monad, Files}](directoryPermissions: Option[Permissions] = None,
-                                                    filePermissions: Option[Permissions] = None): F[Unit] =
+    def createFileIfNotExists[F[_]: {Monad, Files}](filePermissions: Option[Permissions] = None,
+                                                    directoryPermissions: Option[Permissions] = None): F[Unit] =
       for
         _ <- createParentDirectories[F](directoryPermissions)
         _ <- Monad[F].ifM[Unit](Files[F].exists(path))(().pure[F], Files[F].createFile(path, filePermissions))
