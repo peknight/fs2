@@ -19,6 +19,7 @@ package object path:
   val lib: Path = Path("lib")
   val logs: Path = Path("logs")
   val projects: Path = Path("projects")
+  val sbin: Path = Path("sbin")
   val services: Path = Path("services")
   val share: Path = Path("share")
 
