@@ -15,6 +15,7 @@ package object path:
   val certs: Path = Path("certs")
   val conf: Path = Path("conf")
   val data: Path = Path("data")
+  val docker: Path = Path("docker")
   val lib: Path = Path("lib")
   val logs: Path = Path("logs")
   val projects: Path = Path("projects")
