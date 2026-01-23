@@ -26,7 +26,7 @@ package object path:
   val `.local`: Path = Path(".local")
 
   val usrLocal: Path = Root / usr / "local"
-  val varLib: Path = Root / `var` / "lib"
+  val varLib: Path = Root / `var` / lib
   val varLog: Path = Root / `var` / "log"
   val etcTimezone: Path = Root / etc / "timezone"
   val etcLocaltime: Path = Root / etc / "localtime"
