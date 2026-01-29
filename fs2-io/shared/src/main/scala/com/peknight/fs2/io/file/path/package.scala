@@ -1,6 +1,10 @@
 package com.peknight.fs2.io.file
 
-import fs2.io.file.Path
+import cats.effect.Sync
+import fs2.Stream
+import fs2.io.file.{Files, Path}
+
+import java.nio.file.NoSuchFileException
 
 package object path:
   val Root: Path = Path("/")
@@ -30,4 +34,13 @@ package object path:
   val varLog: Path = Root / `var` / "log"
   val etcTimezone: Path = Root / etc / "timezone"
   val etcLocaltime: Path = Root / etc / "localtime"
+
+  def recursive[F[_]: {Sync, Files}](path: Path): Stream[F, Path] =
+    for
+      exists <- Stream.eval(Files[F].exists(path))
+      path <- if exists then Stream.emit[F, Path](path) else Stream.raiseError[F](NoSuchFileException(path.toString))
+      directory <- Stream.eval(Files[F].isDirectory(path))
+      path <- Stream.emit[F, Path](path) ++ (if directory then Files[F].list(path).flatMap(recursive[F]) else Stream.empty)
+    yield
+      path
 end path
