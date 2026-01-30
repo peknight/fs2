@@ -13,6 +13,8 @@ lazy val fs2 = (project in file("."))
     fs2IO.js,
     fs2Tar.jvm,
     fs2Tar.js,
+    fs2Zip.jvm,
+    fs2Zip.js,
   )
 
 lazy val fs2Core = (crossProject(JVMPlatform, JSPlatform) in file("fs2-core"))
@@ -29,7 +31,17 @@ lazy val fs2IO = (crossProject(JVMPlatform, JSPlatform) in file("fs2-io"))
 lazy val fs2Tar = (crossProject(JVMPlatform, JSPlatform) in file("fs2-tar"))
   .dependsOn(fs2IO)
   .settings(name := "fs2-tar")
-  .settings(crossDependencies(gav.fs2.io))
+  .jvmSettings(libraryDependencies ++= jvmDependencies(
+    apache.commons.compress
+  ))
+  .settings(crossTestDependencies(
+    scalaTest.flatSpec,
+    typelevel.catsEffect.testingScalaTest
+  ))
+
+lazy val fs2Zip = (crossProject(JVMPlatform, JSPlatform) in file("fs2-zip"))
+  .dependsOn(fs2IO)
+  .settings(name := "fs2-zip")
   .jvmSettings(libraryDependencies ++= jvmDependencies(
     apache.commons.compress
   ))

@@ -1,32 +1,31 @@
-package com.peknight.fs2.tar
+package com.peknight.fs2.zip
 
 import cats.effect.IO
 import cats.effect.testing.scalatest.AsyncIOSpec
 import fs2.Stream
-import fs2.compression.Compression
 import fs2.io.file.{Files, Path}
 import fs2.text.utf8
 import org.scalatest.flatspec.AsyncFlatSpec
 
-class TarFlatSpec extends AsyncFlatSpec with AsyncIOSpec:
-  "Tar" should "pass" in {
+class ZipFlatSpec extends AsyncFlatSpec with AsyncIOSpec:
+  "Zip" should "pass" in {
     def write(path: Path, content: String): IO[Unit] =
       Stream[IO, String](content).through(utf8.encode[IO]).through(Files[IO].writeAll(path)).compile.drain
     def read(path: Path): IO[String] =
       Files[IO].readAll(path).through(utf8.decode[IO]).compile.toList.map(_.mkString.trim)
     val testDir: Path = Path("test")
-    val dir: Path = Path("tar-dir")
-    val file: Path = Path("tar-file.txt")
+    val dir: Path = Path("zip-dir")
+    val file: Path = Path("zip-file.txt")
     val fileContent: String = "file1"
-    val subFile1: Path = dir / Path("tar-sub-file-1.txt")
+    val subFile1: Path = dir / Path("zip-sub-file-1.txt")
     val subFile1Content: String = "file2"
-    val subFile2: Path = dir / Path("tar-sub-file-2.txt")
+    val subFile2: Path = dir / Path("zip-sub-file-2.txt")
     val subFile2Content: String = "file3"
-    val subDir: Path = dir / Path("tar-sub-dir")
-    val subSubFile: Path = subDir / Path("tar-sub-sub-file.txt")
+    val subDir: Path = dir / Path("zip-sub-dir")
+    val subSubFile: Path = subDir / Path("zip-sub-sub-file.txt")
     val subSubFileContent: String = "file4"
-    val tarFile: Path = testDir / Path("tar.tar.gz")
-    val outputDir: Path = testDir / Path("tar-output")
+    val zipFile: Path = testDir / Path("zip.zip")
+    val outputDir: Path = testDir / Path("zip-output")
     for
       _ <- Files[IO].createDirectories(testDir / subDir)
       _ <- write(testDir / file, fileContent)
@@ -36,13 +35,11 @@ class TarFlatSpec extends AsyncFlatSpec with AsyncIOSpec:
       _ <- Stream[IO, Path](testDir / dir, testDir / file)
         .through(archive[IO])
         .through(readAll[IO]())
-        .through(Compression[IO].gzip())
-        .through(Files[IO].writeAll(tarFile))
+        .through(Files[IO].writeAll(zipFile))
         .compile
         .drain
-      _ <- Files[IO].readAll(tarFile)
-        .through(Compression[IO].gunzip())
-        .flatMap(gunzipResult => gunzipResult.content.through(unarchive[IO]()))
+      _ <- Files[IO].readAll(zipFile)
+        .through(unarchive[IO]())
         .through(writeAll[IO](outputDir, false))
         .compile
         .drain
@@ -55,5 +52,6 @@ class TarFlatSpec extends AsyncFlatSpec with AsyncIOSpec:
       assert(outputSubFile1Content === subFile1Content)
       assert(outputSubFile2Content === subFile2Content)
       assert(outputSubSubFileContent === subSubFileContent)
+
   }
-end TarFlatSpec
+end ZipFlatSpec
