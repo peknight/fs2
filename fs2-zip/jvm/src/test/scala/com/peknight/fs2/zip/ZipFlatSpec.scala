@@ -52,6 +52,5 @@ class ZipFlatSpec extends AsyncFlatSpec with AsyncIOSpec:
       assert(outputSubFile1Content === subFile1Content)
       assert(outputSubFile2Content === subFile2Content)
       assert(outputSubSubFileContent === subSubFileContent)
-
   }
 end ZipFlatSpec
