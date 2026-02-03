@@ -14,6 +14,26 @@ case class TarArchiveEntry[F[_]](entry: ApacheTarArchiveEntry, content: Stream[F
     .flatMap(PosixPermissions.fromInt)
   def isDirectory(using Sync[F]): F[Boolean] = Sync[F].blocking(entry.isDirectory)
   def isLink(using Sync[F]): F[Boolean] = Sync[F].blocking(entry.isSymbolicLink || entry.isLink)
+  def copy(name: Path): TarArchiveEntry[F] =
+    val next = new ApacheTarArchiveEntry(name.toString)
+    next.setCreationTime(entry.getCreationTime)
+    next.setDataOffset(entry.getDataOffset)
+    next.setDevMajor(entry.getDevMajor)
+    next.setDevMinor(entry.getDevMinor)
+    next.setGroupId(entry.getLongGroupId)
+    next.setGroupName(entry.getGroupName)
+    next.setLastAccessTime(entry.getLastAccessTime)
+    next.setLastModifiedTime(entry.getLastModifiedTime)
+    next.setLinkName(entry.getLinkName)
+    next.setMode(entry.getMode)
+    next.setModTime(entry.getModTime)
+    next.setSize(entry.getSize)
+    next.setSparseHeaders(entry.getSparseHeaders)
+    next.setStatusChangeTime(entry.getStatusChangeTime)
+    next.setUserId(entry.getLongUserId)
+    next.setUserName(entry.getUserName)
+    TarArchiveEntry[F](next, content)
+  end copy
 end TarArchiveEntry
 object TarArchiveEntry:
   def from[F[_]: {Sync, Files}](path: Path, name: Path): F[TarArchiveEntry[F]] =
