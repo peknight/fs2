@@ -15,13 +15,13 @@ import fs2.{Pipe, Stream}
 import java.io.{BufferedInputStream, InputStream, OutputStream}
 
 package object archivers:
-  def archive[F[_]: {Sync, Files}, Archive <: ArchiveEntry[F, ?]](f: (Path, Path) => F[Archive])
+  def readAll[F[_]: {Sync, Files}, Archive <: ArchiveEntry[F, ?]](f: (Path, Path) => F[Archive])
   : Pipe[F, Path, Archive] =
     _.flatMap(path => Stream.eval[F, Path](Files[F].realPath(path)))
       .flatMap(realPath => recursive[F](realPath).map(p => (p, realPath.parent.getOrElse(Root).relativize(p))))
       .evalMap((path, name) => f(path, name))
 
-  def readAll[F[_]: Async, ArchiveOutputStream <: OutputStream, Entry, Archive <: ArchiveEntry[F, Entry]]
+  def archive[F[_]: Async, ArchiveOutputStream <: OutputStream, Entry, Archive <: ArchiveEntry[F, Entry]]
              (chunkSize: Int = 1024 * 32)
              (streamF: OutputStream => ArchiveOutputStream)
              (putArchiveEntry: (ArchiveOutputStream, Entry) => Unit)

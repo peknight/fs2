@@ -33,8 +33,8 @@ class ZipFlatSpec extends AsyncFlatSpec with AsyncIOSpec:
       _ <- write(testDir / subFile2, subFile2Content)
       _ <- write(testDir / subSubFile, subSubFileContent)
       _ <- Stream[IO, Path](testDir / dir, testDir / file)
-        .through(archive[IO])
-        .through(readAll[IO]())
+        .through(readAll[IO])
+        .through(archive[IO]())
         .through(Files[IO].writeAll(zipFile))
         .compile
         .drain

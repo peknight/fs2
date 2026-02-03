@@ -7,11 +7,11 @@ import fs2.io.file.{Files, Path}
 import org.apache.commons.compress.archivers.zip.{ZipArchiveInputStream, ZipArchiveOutputStream, ZipArchiveEntry as ApacheZipArchiveEntry}
 
 package object zip:
-  def archive[F[_]: {Sync, Files}]: Pipe[F, Path, ZipArchiveEntry[F]] =
-    archivers.archive[F, ZipArchiveEntry[F]](ZipArchiveEntry.from[F])
+  def readAll[F[_]: {Sync, Files}]: Pipe[F, Path, ZipArchiveEntry[F]] =
+    archivers.readAll[F, ZipArchiveEntry[F]](ZipArchiveEntry.from[F])
 
-  def readAll[F[_]: Async](chunkSize: Int = 1024 * 32): Pipe[F, ZipArchiveEntry[F], Byte] =
-    archivers.readAll[F, ZipArchiveOutputStream, ApacheZipArchiveEntry, ZipArchiveEntry[F]](chunkSize)(
+  def archive[F[_]: Async](chunkSize: Int = 1024 * 32): Pipe[F, ZipArchiveEntry[F], Byte] =
+    archivers.archive[F, ZipArchiveOutputStream, ApacheZipArchiveEntry, ZipArchiveEntry[F]](chunkSize)(
       ZipArchiveOutputStream(_))(_.putArchiveEntry(_))(_.closeArchiveEntry())
 
   def unarchive[F[_]: Async](chunkSize: Int = 1024 * 32): Pipe[F, Byte, ZipArchiveEntry[F]] =
