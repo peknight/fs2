@@ -15,9 +15,9 @@ case class TarArchiveEntry[F[_]](entry: ApacheTarArchiveEntry, content: Stream[F
   def isDirectory(using Sync[F]): F[Boolean] = Sync[F].blocking(entry.isDirectory)
   def isLink(using Sync[F]): F[Boolean] = Sync[F].blocking(entry.isSymbolicLink || entry.isLink)
   def copy(name: Path): TarArchiveEntry[F] =
-    val next = new ApacheTarArchiveEntry(name.toString)
+    val next = new ApacheTarArchiveEntry(name.toString, entry.getLinkFlag)
     next.setCreationTime(entry.getCreationTime)
-    next.setDataOffset(entry.getDataOffset)
+    if entry.getDataOffset >= 0 then next.setDataOffset(entry.getDataOffset) else ()
     next.setDevMajor(entry.getDevMajor)
     next.setDevMinor(entry.getDevMinor)
     next.setGroupId(entry.getLongGroupId)
