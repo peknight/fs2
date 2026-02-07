@@ -5,7 +5,7 @@ import cats.syntax.applicative.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{Applicative, Monad}
-import fs2.io.file.{Files, Flags, Path, Permissions}
+import fs2.io.file.*
 import fs2.{Compiler, Stream}
 
 import java.io.{FileInputStream, FileOutputStream, FileReader, FileWriter}
@@ -41,6 +41,12 @@ trait PathSyntax:
       for
         _ <- createParentDirectories[F](directoryPermissions)
         _ <- Monad[F].ifM[Unit](Files[F].exists(path))(().pure[F], stream.through(Files[F].writeAll(path, flags)).compile.drain)
+      yield
+        ()
+    def addPosixPermission[F[_]: {Monad, Files}](permission: PosixPermission): F[Unit] =
+      for
+        permissions <- Files[F].getPosixPermissions(path)
+        _ <- Files[F].setPosixPermissions(path, permissions.add(permission))
       yield
         ()
   end extension
