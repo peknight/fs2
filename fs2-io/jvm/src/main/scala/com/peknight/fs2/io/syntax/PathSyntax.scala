@@ -6,9 +6,10 @@ import cats.syntax.flatMap.*
 import cats.syntax.functor.*
 import cats.{Applicative, Monad}
 import fs2.io.file.*
-import fs2.{Compiler, Stream}
+import fs2.{Compiler, Stream, text}
 
 import java.io.{FileInputStream, FileOutputStream, FileReader, FileWriter}
+import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Paths
 
 trait PathSyntax:
@@ -28,6 +29,11 @@ trait PathSyntax:
         _ <- Monad[F].ifM[Unit](Files[F].exists(path))(().pure[F], Files[F].createFile(path, filePermissions))
       yield
         ()
+
+    private def handleWriteString[F[_]](value: String, charset: Charset, flags: Flags)(using Files[F], Compiler[F, F])
+    : F[Unit] =
+      Stream(value).through(text.encode[F](charset)).through(Files[F].writeAll(path, flags)).compile.drain
+
     def writeFile[F[_]](stream: Stream[F, Byte], flags: Flags = Flags.Write, directoryPermissions: Option[Permissions] = None)
                        (using Monad[F], Files[F], Compiler[F, F]): F[Unit] =
       for
@@ -43,6 +49,24 @@ trait PathSyntax:
         _ <- Monad[F].ifM[Unit](Files[F].exists(path))(().pure[F], stream.through(Files[F].writeAll(path, flags)).compile.drain)
       yield
         ()
+
+    def writeString[F[_]](value: String, charset: Charset = StandardCharsets.UTF_8, flags: Flags = Flags.Write,
+                          directoryPermissions: Option[Permissions] = None)
+                         (using Monad[F], Files[F], Compiler[F, F]): F[Unit] =
+      for
+        _ <- createParentDirectories[F](directoryPermissions)
+        _ <- handleWriteString[F](value, charset, flags)
+      yield
+        ()
+    def writeStringIfNotExists[F[_]](value: => String, charset: Charset = StandardCharsets.UTF_8,
+                                     flags: Flags = Flags.Write, directoryPermissions: Option[Permissions] = None)
+                                    (using Monad[F], Files[F], Compiler[F, F]): F[Unit] =
+      for
+        _ <- createParentDirectories[F](directoryPermissions)
+        _ <- Monad[F].ifM[Unit](Files[F].exists(path))(().pure[F], handleWriteString[F](value, charset, flags))
+      yield
+        ()
+
     def addPosixPermission[F[_]: {Monad, Files}](permission: PosixPermission): F[Unit] =
       for
         permissions <- Files[F].getPosixPermissions(path)
