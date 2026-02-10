@@ -22,6 +22,7 @@ package object path:
   val docker: Path = Path("docker")
   val lib: Path = Path("lib")
   val logs: Path = Path("logs")
+  val plugins: Path = Path("plugins")
   val projects: Path = Path("projects")
   val sbin: Path = Path("sbin")
   val services: Path = Path("services")
