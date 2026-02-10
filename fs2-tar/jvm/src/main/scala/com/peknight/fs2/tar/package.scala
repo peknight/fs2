@@ -11,8 +11,11 @@ package object tar:
     archivers.readAll[F, TarArchiveEntry[F]](TarArchiveEntry.from[F])
 
   def archive[F[_]: Async](chunkSize: Int = 1024 * 32): Pipe[F, TarArchiveEntry[F], Byte] =
-    archivers.archive[F, TarArchiveOutputStream, ApacheTarArchiveEntry, TarArchiveEntry[F]](chunkSize)(
-      TarArchiveOutputStream(_))(_.putArchiveEntry(_))(_.closeArchiveEntry())
+    archivers.archive[F, TarArchiveOutputStream, ApacheTarArchiveEntry, TarArchiveEntry[F]](chunkSize){ outputStream =>
+      val tarArchiveOutputStream: TarArchiveOutputStream = TarArchiveOutputStream(outputStream)
+      tarArchiveOutputStream.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
+      tarArchiveOutputStream
+    }(_.putArchiveEntry(_))(_.closeArchiveEntry())
 
   def unarchive[F[_]: Async](chunkSize: Int = 1024 * 32): Pipe[F, Byte, TarArchiveEntry[F]] =
     archivers.unarchive[F, TarArchiveInputStream, ApacheTarArchiveEntry, TarArchiveEntry[F]](chunkSize)(
