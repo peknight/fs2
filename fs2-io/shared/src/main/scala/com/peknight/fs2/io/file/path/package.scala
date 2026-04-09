@@ -24,6 +24,7 @@ package object path:
   val logs: Path = Path("logs")
   val plugins: Path = Path("plugins")
   val projects: Path = Path("projects")
+  val root: Path = Path("root")
   val sbin: Path = Path("sbin")
   val services: Path = Path("services")
   val share: Path = Path("share")
