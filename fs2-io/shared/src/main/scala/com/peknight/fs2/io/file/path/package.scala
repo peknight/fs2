@@ -21,6 +21,7 @@ package object path:
   val data: Path = Path("data")
   val docker: Path = Path("docker")
   val lib: Path = Path("lib")
+  val log: Path = Path("log")
   val logs: Path = Path("logs")
   val plugins: Path = Path("plugins")
   val projects: Path = Path("projects")
@@ -33,7 +34,7 @@ package object path:
 
   val usrLocal: Path = Root / usr / "local"
   val varLib: Path = Root / `var` / lib
-  val varLog: Path = Root / `var` / "log"
+  val varLog: Path = Root / `var` / log
   val etcTimezone: Path = Root / etc / "timezone"
   val etcLocaltime: Path = Root / etc / "localtime"
 
