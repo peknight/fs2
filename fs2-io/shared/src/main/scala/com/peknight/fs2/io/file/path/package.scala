@@ -20,6 +20,7 @@ package object path:
   val conf: Path = Path("conf")
   val data: Path = Path("data")
   val docker: Path = Path("docker")
+  val home: Path = Path("home")
   val lib: Path = Path("lib")
   val log: Path = Path("log")
   val logs: Path = Path("logs")
