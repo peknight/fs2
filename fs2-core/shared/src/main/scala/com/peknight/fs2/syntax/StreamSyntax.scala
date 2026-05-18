@@ -1,11 +1,15 @@
 package com.peknight.fs2.syntax
 
-import cats.Applicative
+import cats.syntax.functor.*
+import cats.{Applicative, Functor}
 import com.peknight.fs2.pipe
-import fs2.{Chunk, Stream}
+import fs2.{Chunk, Compiler, Pull, Stream}
 
 trait StreamSyntax:
   extension [F[_], I] (stream: Stream[F, I])
+    def uncons1(using Functor[F], Compiler[F, F]): F[Option[(I, Stream[F, I])]] =
+      stream.pull.uncons1.flatMap(Pull.output1).stream.compile.toList.map(_.headOption.flatten)
+
     def allocate(f: (Chunk[I], Chunk[I]) => (Chunk[I], Chunk[I])): Stream[F, I] = stream.through(pipe.allocate(f))
 
     def chunkTimesN(n: Int): Stream[F, I] = stream.through(pipe.chunkTimesN(n))
