@@ -12,8 +12,8 @@ package object resource:
 
   /**
    * 将流转化为 Resource，每当流产出新元素时：
-   * 1. 用 f 将元素转化为 Resource 并获取
-   * 2. 释放前一个元素对应的 Resource
+   * 1. 释放前一个元素对应的 Resource
+   * 2. 用 f 将新元素转化为 Resource 并获取
    * 3. 将最新值存入 Ref
    * 整体资源释放时，最后一个持有者会被安全释放。
    * 如果流未产出任何元素，将 raiseError。
@@ -24,13 +24,17 @@ package object resource:
     type State = Option[(B, F[Unit])]
 
     def processOne(state: Ref[F, State], ready: Deferred[F, Unit])(a: A): F[Unit] =
-      f(a).allocated.flatMap { case (b, release) =>
-        val update: State => (State, F[Unit]) = {
-          case Some((_, oldRelease)) => (Some((b, release)): State, oldRelease: F[Unit])
-          case None                  => (Some((b, release)): State, F.unit: F[Unit])
+      for
+        (oldRelease, isFirst) <- state.modify {
+          case Some((_, rel)) => (None, (rel, false))
+          case None           => (None, (F.unit, true))
         }
-        state.modify(update).flatten *> ready.complete(()).void
-      }
+        _ <- oldRelease
+        _ <- f(a).allocated.flatMap { case (b, release) =>
+          state.set(Some((b, release)))
+        }
+        _ <- if (isFirst) ready.complete(()).void else F.unit
+      yield ()
 
     def acquire: F[(Ref[F, State], Fiber[F, Throwable, Unit])] =
       Ref[F].of(none[(B, F[Unit])]).flatMap { state =>
