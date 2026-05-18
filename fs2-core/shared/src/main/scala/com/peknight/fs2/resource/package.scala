@@ -1,6 +1,6 @@
 package com.peknight.fs2
 
-import _root_.fs2.Stream
+import _root_.fs2.{Pull, Stream}
 import cats.effect.syntax.all.*
 import cats.effect.{Concurrent, Deferred, Fiber, Resource, Ref}
 import cats.syntax.apply.*
@@ -55,6 +55,20 @@ package object resource:
 
     Resource.make(acquire)(release).map { case (state, _) =>
       state.asInstanceOf[Ref[F, B]]
+    }
+
+  /**
+   * 将流拆分为第一个元素和剩余流。
+   * 如果流为空，返回 None。
+   */
+  def uncons[F[_], A](stream: Stream[F, A])(using F: cats.effect.kernel.Concurrent[F])
+  : F[Option[(A, Stream[F, A])]] =
+    Ref[F].of(none[(A, Stream[F, A])]).flatMap { ref =>
+      val pull: Pull[F, Nothing, Unit] = stream.pull.uncons1.flatMap {
+        case Some((a, tail)) => Pull.eval(ref.set(Some((a, tail))))
+        case None => Pull.pure(())
+      }
+      pull.stream.compile.drain *> ref.get
     }
 
 end resource
