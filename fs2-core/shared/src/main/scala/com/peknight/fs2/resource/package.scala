@@ -1,74 +1,43 @@
 package com.peknight.fs2
 
-import _root_.fs2.{Pull, Stream}
-import cats.effect.syntax.all.*
-import cats.effect.{Concurrent, Deferred, Fiber, Resource, Ref}
+import _root_.fs2.Stream
+import cats.syntax.option.*
+import cats.effect.*
+import cats.effect.std.AtomicCell
+import cats.effect.syntax.spawn.*
+import cats.syntax.applicative.*
+import cats.syntax.applicativeError.*
 import cats.syntax.apply.*
 import cats.syntax.flatMap.*
 import cats.syntax.functor.*
-import cats.syntax.option.*
+import com.peknight.fs2.syntax.stream.uncons1
+
+import java.util.NoSuchElementException
 
 package object resource:
-
-  /**
-   * 将流转化为 Resource，每当流产出新元素时：
-   * 1. 释放前一个元素对应的 Resource
-   * 2. 用 f 将新元素转化为 Resource 并获取
-   * 3. 将最新值存入 Ref
-   * 整体资源释放时，最后一个持有者会被安全释放。
-   * 如果流未产出任何元素，将 raiseError。
-   */
-  def latest[F[_], A, B](stream: Stream[F, A])(f: A => Resource[F, B])(using F: Concurrent[F])
-  : Resource[F, Ref[F, B]] =
-
-    type State = Option[(B, F[Unit])]
-
-    def processOne(state: Ref[F, State], ready: Deferred[F, Unit])(a: A): F[Unit] =
-      for
-        (oldRelease, isFirst) <- state.modify {
-          case Some((_, rel)) => (None, (rel, false))
-          case None           => (None, (F.unit, true))
-        }
-        _ <- oldRelease
-        _ <- f(a).allocated.flatMap { case (b, release) =>
-          state.set(Some((b, release)))
-        }
-        _ <- if (isFirst) ready.complete(()).void else F.unit
-      yield ()
-
-    def acquire: F[(Ref[F, State], Fiber[F, Throwable, Unit])] =
-      Ref[F].of(none[(B, F[Unit])]).flatMap { state =>
-        Deferred[F, Unit].flatMap { ready =>
-          val fiber: F[Fiber[F, Throwable, Unit]] = stream.evalMap(processOne(state, ready)).compile.drain.start
-          fiber.flatMap { f =>
-            ready.get.as((state, f))
-          }
-        }
-      }
-
-    def release(tuple: (Ref[F, State], Fiber[F, Throwable, Unit])): F[Unit] =
-      val (state, fiber) = tuple
-      state.getAndSet(None).flatMap {
-        case Some((_, release)) => release
-        case None               => F.unit
+  def latest[F[_], I, O](stream: Stream[F, I])(f: I => Resource[F, O])(using F: Concurrent[F])
+  : Resource[F, Ref[F, O]] =
+    Resource.make(stream.uncons1.flatMap {
+      case Some((head, tail)) =>
+        for
+          (resource, release) <- f(head).allocated
+          ref <- Ref.of[F, O](resource)
+          // 外部将资源关闭时会将releaseCell置为None
+          releaseCell <- AtomicCell[F].of[Option[F[Unit]]](release.some)
+          fiber <- tail
+            .evalMap(a => releaseCell.evalModify {
+              case Some(release) => release *> f(a).allocated.map((nextResource, nextRelease) => (nextRelease.some, nextResource.some))
+              case finalized => (finalized, none[O]).pure[F]
+            }.flatMap(_.fold(().pure[F])(ref.set)))
+            .compile.drain.start
+        yield
+          (ref, releaseCell, fiber)
+      case _ => NoSuchElementException("empty stream")
+        .raiseError[F, (Ref[F, O], AtomicCell[F, Option[F[Unit]]], Fiber[F, Throwable, Unit])]
+    }) {
+      case (ref, releaseCell, fiber) => releaseCell.evalUpdate {
+        case Some(release) => release.as(none[F[Unit]])
+        case finalized => finalized.pure[F]
       } *> fiber.cancel
-
-    Resource.make(acquire)(release).map { case (state, _) =>
-      state.asInstanceOf[Ref[F, B]]
-    }
-
-  /**
-   * 将流拆分为第一个元素和剩余流。
-   * 如果流为空，返回 None。
-   */
-  def uncons[F[_], A](stream: Stream[F, A])(using F: cats.effect.kernel.Concurrent[F])
-  : F[Option[(A, Stream[F, A])]] =
-    Ref[F].of(none[(A, Stream[F, A])]).flatMap { ref =>
-      val pull: Pull[F, Nothing, Unit] = stream.pull.uncons1.flatMap {
-        case Some((a, tail)) => Pull.eval(ref.set(Some((a, tail))))
-        case None => Pull.pure(())
-      }
-      pull.stream.compile.drain *> ref.get
-    }
-
+    }.map(_._1)
 end resource
