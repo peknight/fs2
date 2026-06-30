@@ -4,8 +4,9 @@ import com.peknight.build.sbt.*
 
 commonSettings
 
-lazy val fs2 = (project in file("."))
+lazy val fs2 = rootProject
   .settings(name := "fs2")
+  .settings(publish / skip := true)
   .aggregate(fs2Core.projectRefs *)
   .aggregate(fs2IO.projectRefs *)
   .aggregate(fs2Tar.projectRefs *)
