@@ -1,9 +1,9 @@
 package com.peknight.fs2.pull
 
-import cats.data.IndexedStateT
+import cats.data.StateT
 import fs2.{Pull, Stream}
 
 package object state:
-  type EitherPullState[F[_], O, E, SA, SB, I, A] =
-    IndexedStateT[[X] =>> Pull[F, O, Either[E, X]], (SA, Stream[F, I]), (SB, Stream[F, I]), A]
+  type PullState[F[_], I, O, A] = StateT[[X] =>> Pull[F, O, X], Stream[F, I], A]
+  type BytePullState[F[_], O, A] = PullState[F, Byte, O, A]
 end state
