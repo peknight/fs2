@@ -1,7 +1,7 @@
 package com.peknight.fs2.pull.state
 
 import cats.data.StateT
-import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput}
+import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE}
 import fs2.Stream.ToPull
 import fs2.{Chunk, Pull, RaiseThrowable, Stream}
 import scodec.bits.ByteVector
@@ -103,9 +103,13 @@ object BytePullState:
     def attempt: BytePullState[F, O, Either[Throwable, A]] = state.pullStateAttempt
     def output(f: A => Chunk[O])(g: Throwable => Chunk[O])(using RaiseThrowable[F]): BytePullState[F, O, A] =
       state.pullStateOutput(f)(g)
+    def outputE(f: Either[Throwable, A] => Chunk[O])(using RaiseThrowable[F]): BytePullState[F, O, A] =
+      state.pullStateOutputE(f)
   end extension
   extension [F[_], A] (state: BytePullState[F, Byte, A])
     def outputBytes(f: A => ByteVector)(g: Throwable => ByteVector)(using RaiseThrowable[F]): BytePullState[F, Byte, A] =
       state.pullStateOutput(a => Chunk.byteVector(f(a)))(e => Chunk.byteVector(g(e)))
+    def outputBytesE(f: Either[Throwable, A] => ByteVector)(using RaiseThrowable[F]): BytePullState[F, Byte, A] =
+      state.pullStateOutputE(either => Chunk.byteVector(f(either)))
   end extension
 end BytePullState

@@ -76,11 +76,16 @@ object PullState:
         case Left(error) => Pull.pure((stream, error.asLeft[A]))
       })
     def output(f: A => Chunk[O])(g: Throwable => Chunk[O])(using RaiseThrowable[F]): PullState[F, I, O, A] =
+      outputE {
+        case Right(a) => f(a)
+        case Left(error) => g(error)
+      }
+    def outputE(f: Either[Throwable, A] => Chunk[O])(using RaiseThrowable[F]): PullState[F, I, O, A] =
       attempt.flatMap {
         case Right(a) =>
-          PullState.output(f(a)).as(a)
+          PullState.output(f(a.asRight)).as(a)
         case Left(error) =>
-          PullState.output(g(error)).flatMap(_ => raiseError(error))
+          PullState.output(f(error.asLeft)).flatMap(_ => raiseError(error))
       }
   end extension
 end PullState
