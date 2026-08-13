@@ -4,6 +4,7 @@ import cats.data.StateT
 import com.peknight.fs2.pull.state.PullState.attempt as pullStateAttempt
 import fs2.Stream.ToPull
 import fs2.{Chunk, Pull, RaiseThrowable, Stream}
+import scodec.bits.ByteVector
 
 import java.io.EOFException
 import java.nio.charset.Charset
@@ -27,6 +28,9 @@ object BytePullState:
   def output[F[_], O](chunk: Chunk[O]): BytePullState[F, O, Unit] = PullState.output[F, Byte, O](chunk)
 
   def output[F[_], O](os: O*): BytePullState[F, O, Unit] = PullState.output[F, Byte, O](os*)
+
+  def output[F[_]](bytes: ByteVector): BytePullState[F, Byte, Unit] =
+    PullState.output[F, Byte, Byte](Chunk.byteVector(bytes))
 
   def output1[F[_], O](o: O): BytePullState[F, O, Unit] = PullState.output1[F, Byte, O](o)
 
