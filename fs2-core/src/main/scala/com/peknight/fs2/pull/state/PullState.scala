@@ -2,6 +2,7 @@ package com.peknight.fs2.pull.state
 
 import cats.data.StateT
 import cats.syntax.either.*
+import cats.syntax.functor.*
 import fs2.Stream.ToPull
 import fs2.{Chunk, Pull, RaiseThrowable, Stream}
 
@@ -74,5 +75,12 @@ object PullState:
         case Right((tail, value)) => Pull.pure((tail, value.asRight[Throwable]))
         case Left(error) => Pull.pure((stream, error.asLeft[A]))
       })
+    def output(f: A => Chunk[O])(g: Throwable => Chunk[O])(using RaiseThrowable[F]): PullState[F, I, O, A] =
+      attempt.flatMap {
+        case Right(a) =>
+          PullState.output(f(a)).as(a)
+        case Left(error) =>
+          PullState.output(g(error)).flatMap(_ => raiseError(error))
+      }
   end extension
 end PullState
