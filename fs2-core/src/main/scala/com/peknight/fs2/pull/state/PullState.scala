@@ -19,24 +19,26 @@ object PullState:
 
   def liftF[F[_], I, O, A](f: Pull[F, O, A]): PullState[F, I, O, A] = StateT.liftF(f)
 
-  def pull[F[_], I, O, A](f: ToPull[F, I] => Pull[F, O, Option[(A, Stream[F, I])]])
+  def pull[F[_], I, O, A](f: ToPull[F, I] => Pull[F, O, Option[(A, Stream[F, I])]])(eof: => Throwable)
                          (using ApplicativeError[F, Throwable]): PullState[F, I, O, A] =
     apply[F, I, O, A](stream => f(stream.pull).evalMap {
       case Some(tuple) => tuple.swap.pure[F]
-      case _ => new EOFException().raiseError[F, (Stream[F, I], A)]
+      case _ => eof.raiseError[F, (Stream[F, I], A)]
     })
 
-  def unconsSizedBytes[F[_], O](using ApplicativeError[F, Throwable]): BytePullState[F, O, Chunk[Byte]] =
+  def unconsSizedBytes[F[_], O](eof: => Throwable = new EOFException())(using ApplicativeError[F, Throwable])
+  : BytePullState[F, O, Chunk[Byte]] =
     for
-      n <- pull[F, Byte, O, Byte](_.uncons1)
-      chunk <- pull[F, Byte, O, Chunk[Byte]](_.unconsN(n))
+      n <- pull[F, Byte, O, Byte](_.uncons1)(eof)
+      chunk <- pull[F, Byte, O, Chunk[Byte]](_.unconsN(n))(eof)
     yield
       chunk
 
-  def unconsSizedString[F[_], O](using charset: Charset)(using ApplicativeError[F, Throwable])
+  def unconsSizedString[F[_], O](eof: => Throwable = new EOFException())
+                                (using charset: Charset)(using ApplicativeError[F, Throwable])
   : BytePullState[F, O, String] =
     for
-      chunk <- unconsSizedBytes[F, O]
+      chunk <- unconsSizedBytes[F, O](eof)
       bytes = chunk.toByteVector
       value <-
         bytes.decodeString match
