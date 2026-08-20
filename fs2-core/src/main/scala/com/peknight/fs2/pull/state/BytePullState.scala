@@ -1,120 +1,141 @@
 package com.peknight.fs2.pull.state
 
 import cats.data.StateT
-import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE}
+import com.peknight.cats.instances.eitherT.given
+import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Stream.ToPull
-import fs2.{Chunk, Pull, RaiseThrowable, Stream}
+import fs2.{Chunk, Pull, Stream}
 import scodec.bits.ByteVector
 
-import java.io.EOFException
 import java.nio.charset.Charset
 
 object BytePullState:
-  def apply[F[_], O, S, A](f: (S, Stream[F, Byte]) => Pull[F, O, ((S, Stream[F, Byte]), A)]): BytePullState[F, O, S, A] =
+  def apply[F[_], S, E, A](f: (S, Stream[F, Byte]) => Pull[F, Byte, Either[E, ((S, Stream[F, Byte]), A)]])
+  : BytePullState[F, S, E, A] =
     StateT(f.tupled)
 
-  def pure[F[_], O, S, A](a: A): BytePullState[F, O, S, A] = StateT.pure(a)
+  def pure[F[_], S, E, A](a: A): BytePullState[F, S, E, A] = StateT.pure(a)
 
-  def unit[F[_], O, S]: BytePullState[F, O, S, Unit] = pure[F, O, S, Unit](())
+  def unit[F[_], S, E]: BytePullState[F, S, E, Unit] = pure[F, S, E, Unit](())
 
-  def liftP[F[_], O, S, A](f: Pull[F, O, A]): BytePullState[F, O, S, A] = StateT.liftF(f)
+  def get[F[_], S, E]: BytePullState[F, S, E, S] = PullState.get[F, Byte, O, S, E]
 
-  def liftF[F[_], O, S, A](f: F[A]): BytePullState[F, O, S, A] = liftP[F, O, S, A](Pull.eval(f))
+  def liftPE[F[_], S, E, A](pull: Pull[F, Either[E, A]]): BytePullState[F, S, E, A] =
+    PullState.liftPE[F, Byte, O, S, E, A](pull)
+  def liftP[F[_], S, E, A](pull: Pull[F, A]): BytePullState[F, S, E, A] =
+    PullState.liftP[F, Byte, O, S, E, A](pull)
+  def liftPL[F[_], S, E, A](pull: Pull[F, E]): BytePullState[F, S, E, A] =
+    PullState.liftPL[F, Byte, O, S, E, A](pull)
 
-  def raiseError[F[_] : RaiseThrowable, O, S, A](e: Throwable): BytePullState[F, O, S, A] = liftP(Pull.raiseError(e))
+  def liftFE[F[_], S, E, A](f: F[Either[E, A]]): BytePullState[F, S, E, A] =
+    PullState.liftFE[F, Byte, O, S, E, A](f)
+  def liftF[F[_], S, E, A](f: F[A]): BytePullState[F, S, E, A] =
+    PullState.liftF[F, Byte, O, S, E, A](f)
+  def liftFL[F[_], S, E, A](f: F[E]): BytePullState[F, S, E, A] =
+    PullState.liftFL[F, Byte, O, S, E, A](f)
 
-  def liftE[F[_]: RaiseThrowable, O, S, A](either: Either[Throwable, A]): BytePullState[F, O, S, A] =
-    PullState.liftE[F, Byte, O, S, A](either)
+  def liftE[F[_], S, E, A](either: Either[E, A]): BytePullState[F, S, E, A] =
+    PullState.liftE[F, Byte, O, S, E, A](either)
+  def liftL[F[_], S, E, A](e: E): BytePullState[F, S, E, A] = PullState.liftL[F, Byte, O, S, E, A](e)
 
-  def output[F[_], O, S](chunk: Chunk[O]): BytePullState[F, O, S, Unit] = PullState.output[F, Byte, O, S](chunk)
+  def liftPET[F[_], S, E, A](pull: Pull[F, Either[Throwable, A]])(error: (S, Throwable) => E)
+  : BytePullState[F, S, E, A] =
+    PullState.liftPET[F, Byte, O, S, E, A](pull)(error)
+  def liftPLT[F[_], S, E, A](pull: Pull[F, Throwable])(error: (S, Throwable) => E)
+  : BytePullState[F, S, E, A] =
+    PullState.liftPLT[F, Byte, O, S, E, A](pull)(error)
+  def liftFET[F[_], S, E, A](f: F[Either[Throwable, A]])(error: (S, Throwable) => E)
+  : BytePullState[F, S, E, A] =
+    PullState.liftFET[F, Byte, O, S, E, A](f)(error)
+  def liftFLT[F[_], S, E, A](f: F[Throwable])(error: (S, Throwable) => E): BytePullState[F, S, E, A] =
+    PullState.liftFLT[F, Byte, O, S, E, A](f)(error)
+  def liftET[F[_], S, E, A](either: Either[Throwable, A])(error: (S, Throwable) => E)
+  : BytePullState[F, S, E, A] =
+    PullState.liftET[F, Byte, O, S, E, A](either)(error)
+  def liftT[F[_], S, E, A](t: Throwable)(error: (S, Throwable) => E): BytePullState[F, S, E, A] =
+    PullState.liftT[F, Byte, O, S, E, A](t)(error)
 
-  def output[F[_], O, S](os: O*): BytePullState[F, O, S, Unit] = PullState.output[F, Byte, O, S](os*)
+  def output[F[_], S, E](chunk: Chunk[O]): BytePullState[F, S, E, Unit] =
+    PullState.output[F, Byte, O, S, E](chunk)
 
-  def output[F[_], S](bytes: ByteVector): BytePullState[F, Byte, S, Unit] =
-    PullState.output[F, Byte, Byte, S](Chunk.byteVector(bytes))
+  def output[F[_], S, E](os: O*): BytePullState[F, S, E, Unit] = PullState.output[F, Byte, O, S, E](os*)
 
-  def output1[F[_], O, S](o: O): BytePullState[F, O, S, Unit] = PullState.output1[F, Byte, O, S](o)
+  def output[F[_], S, E](bytes: ByteVector): BytePullState[F, S, E, Unit] =
+    ByteInPullState.output[F, Byte, S, E](Chunk.byteVector(bytes))
 
-  def pull[F[_]: RaiseThrowable, O, S, A](f: ToPull[F, Byte] => Pull[F, O, Option[(A, Stream[F, Byte])]])
-                                         (eof: => Throwable = new EOFException()): BytePullState[F, O, S, A] =
-    PullState.pull[F, Byte, O, S, A](f)(eof)
+  def output1[F[_], S, E](o: O): BytePullState[F, S, E, Unit] = PullState.output1[F, Byte, O, S, E](o)
 
-  def map[F[_]: RaiseThrowable, I, O, S, A](f: ToPull[F, Byte] => Pull[F, O, Option[(I, Stream[F, Byte])]])
-                                           (g: I => A)(eof: => Throwable = new EOFException())
-  : BytePullState[F, O, S, A] =
-    PullState.map[F, Byte, I, O, S, A](f)(g)(eof)
+  def pull[F[_], S, E, A](f: ToPull[F, Byte] => Pull[F, Option[(A, Stream[F, Byte])]])
+                            (eof: S => E): BytePullState[F, S, E, A] =
+    PullState.pull[F, Byte, O, S, E, A](f)(eof)
 
-  def map1[F[_]: RaiseThrowable, O, S, A](f: Byte => A)(eof: => Throwable = new EOFException())
-  : BytePullState[F, O, S, A] =
-    PullState.map1[F, Byte, O, S, A](f)(eof)
+  def map[F[_], I, O, S, E, A](f: ToPull[F, Byte] => Pull[F, Option[(I, Stream[F, Byte])]])
+                              (g: I => A)(eof: S => E): BytePullState[F, S, E, A] =
+    PullState.map[F, Byte, I, O, S, E, A](f)(g)(eof)
 
-  def mapChunk[F[_]: RaiseThrowable, O, S, A](f: ToPull[F, Byte] => Pull[F, O, Option[(Chunk[Byte], Stream[F, Byte])]])
-                                             (g: Chunk[Byte] => A)(eof: => Throwable = new EOFException())
-  : BytePullState[F, O, S, A] =
-    PullState.mapChunk[F, Byte, O, S, A](f)(g)(eof)
+  def map1[F[_], S, E, A](f: Byte => A)(eof: S => E): BytePullState[F, S, E, A] =
+    PullState.map1[F, Byte, O, S, E, A](f)(eof)
 
-  def parse[F[_]: RaiseThrowable, I, O, S, A](f: ToPull[F, Byte] => Pull[F, O, Option[(I, Stream[F, Byte])]])
-                                             (g: I => Either[Throwable, A])(eof: => Throwable = new EOFException())
-  : BytePullState[F, O, S, A] =
-    PullState.parse[F, Byte, I, O, S, A](f)(g)(eof)
+  def mapChunk[F[_], S, E, A](f: ToPull[F, Byte] => Pull[F, Option[(Chunk[Byte], Stream[F, Byte])]])
+                                (g: Chunk[Byte] => A)(eof: S => E): BytePullState[F, S, E, A] =
+    PullState.mapChunk[F, Byte, O, S, E, A](f)(g)(eof)
 
-  def parse1[F[_]: RaiseThrowable, O, S, A](f: Byte => Either[Throwable, A])(eof: => Throwable = new EOFException())
-  : BytePullState[F, O, S, A] =
-    PullState.parse1[F, Byte, O, S, A](f)(eof)
+  def parse[F[_], I, O, S, E, A](f: ToPull[F, Byte] => Pull[F, Option[(I, Stream[F, Byte])]])
+                                (g: I => Either[Throwable, A])(error: (S, Throwable) => E)(eof: S => E)
+  : BytePullState[F, S, E, A] =
+    PullState.parse[F, Byte, I, O, S, E, A](f)(g)(error)(eof)
 
-  def parseChunk[F[_]: RaiseThrowable, O, S, A](f: ToPull[F, Byte] => Pull[F, O, Option[(Chunk[Byte], Stream[F, Byte])]])
-                                               (g: Chunk[Byte] => Either[Throwable, A])
-                                               (eof: => Throwable = new EOFException()): BytePullState[F, O, S, A] =
-    PullState.parseChunk[F, Byte, O, S, A](f)(g)(eof)
+  def parse1[F[_], S, E, A](f: Byte => Either[Throwable, A])(error: (S, Throwable) => E)(eof: S => E)
+  : BytePullState[F, S, E, A] =
+    PullState.parse1[F, Byte, O, S, E, A](f)(error)(eof)
 
-  def readSizedBytes[F[_]: RaiseThrowable, O, S](eof: => Throwable = new EOFException())
-  : BytePullState[F, O, S, Chunk[Byte]] =
+  def parseChunk[F[_], S, E, A](f: ToPull[F, Byte] => Pull[F, Option[(Chunk[Byte], Stream[F, Byte])]])
+                                  (g: Chunk[Byte] => Either[Throwable, A])(error: (S, Throwable) => E)(eof: S => E)
+  : BytePullState[F, S, E, A] =
+    PullState.parseChunk[F, Byte, O, S, E, A](f)(g)(error)(eof)
+
+  def readSizedBytes[F[_], S, E](eof: S => E): BytePullState[F, S, E, Chunk[Byte]] =
     for
-      n <- pull[F, O, S, Byte](_.uncons1)(eof)
-      chunk <- pull[F, O, S, Chunk[Byte]](_.unconsN(n))(eof)
+      n <- pull[F, S, E, Byte](_.uncons1)(eof)
+      chunk <- pull[F, S, E, Chunk[Byte]](_.unconsN(n))(eof)
     yield
       chunk
 
-  def mapSizedBytes[F[_]: RaiseThrowable, O, S, A](f: Chunk[Byte] => A)(eof: => Throwable = new EOFException())
-  : BytePullState[F, O, S, A] =
-    readSizedBytes[F, O, S](eof).map(f)
+  def mapSizedBytes[F[_], S, E, A](f: Chunk[Byte] => A)(eof: S => E)
+  : BytePullState[F, S, E, A] =
+    readSizedBytes[F, S, E](eof).map(f)
 
-  def parseSizedBytes[F[_]: RaiseThrowable, O, S, A](f: Chunk[Byte] => Either[Throwable, A])
-                                                    (eof: => Throwable = new EOFException()): BytePullState[F, O, S, A] =
+  def parseSizedBytes[F[_], S, E, A](f: Chunk[Byte] => Either[Throwable, A])(error: (S, Throwable) => E)
+                                       (eof: S => E): BytePullState[F, S, E, A] =
     for
-      chunk <- readSizedBytes[F, O, S](eof)
-      value <- liftE[F, O, S, A](f(chunk))
+      chunk <- readSizedBytes[F, S, E](eof)
+      value <- liftET[F, S, E, A](f(chunk))(error)
     yield
       value
 
-  def readSizedString[F[_], O, S](eof: => Throwable = new EOFException())(using Charset)(using RaiseThrowable[F])
-  : BytePullState[F, O, S, String] =
-    parseSizedBytes[F, O, S, String](_.toByteVector.decodeString)(eof)
+  def readSizedString[F[_], S, E](error: (S, Throwable) => E)(eof: S => E)(using Charset)
+  : BytePullState[F, S, E, String] =
+    parseSizedBytes[F, S, E, String](_.toByteVector.decodeString)(error)(eof)
 
-  def mapSizedString[F[_], O, S, A](f: String => A)(eof: => Throwable = new EOFException())(using Charset)
-                                   (using RaiseThrowable[F]): BytePullState[F, O, S, A] =
-    readSizedString[F, O, S](eof).map(f)
+  def mapSizedString[F[_], S, E, A](f: String => A)(error: (S, Throwable) => E)(eof: S => E)(using Charset)
+  : BytePullState[F, S, E, A] =
+    readSizedString[F, S, E](error)(eof).map(f)
 
-  def parseSizedString[F[_], O, S, A](f: String => Either[Throwable, A])(eof: => Throwable = new EOFException())
-                                     (using Charset)(using RaiseThrowable[F]): BytePullState[F, O, S, A] =
+  def parseSizedString[F[_], S, E, A](f: String => Either[Throwable, A])(error: (S, Throwable) => E)(eof: S => E)
+                                        (using Charset): BytePullState[F, S, E, A] =
     for
-      value <- readSizedString[F, O, S](eof)
-      value <- liftE[F, O, S, A](f(value))
+      value <- readSizedString[F, S, E](error)(eof)
+      value <- liftET[F, S, E, A](f(value))(error)
     yield
       value
 
-  extension [F[_], O, S, A] (state: BytePullState[F, O, S, A])
-    def attempt: BytePullState[F, O, S, Either[Throwable, A]] = state.pullStateAttempt
-    def output(f: A => Chunk[O])(g: Throwable => Chunk[O])(using RaiseThrowable[F]): BytePullState[F, O, S, A] =
-      state.pullStateOutput(f)(g)
-    def outputE(f: Either[Throwable, A] => Chunk[O])(using RaiseThrowable[F]): BytePullState[F, O, S, A] =
+  extension [F[_], S, E, A] (state: BytePullState[F, S, E, A])
+    def attempt(error: (S, Throwable) => E): BytePullState[F, S, E, A] = state.pullStateAttempt(error)
+    def outputE(f: Either[E, A] => Chunk[O]): BytePullState[F, S, E, A] =
       state.pullStateOutputE(f)
-  end extension
-  extension [F[_], S, A] (state: BytePullState[F, Byte, S, A])
-    def outputBytes(f: A => ByteVector)(g: Throwable => ByteVector)(using RaiseThrowable[F])
-    : BytePullState[F, Byte, S, A] =
-      state.pullStateOutput(a => Chunk.byteVector(f(a)))(e => Chunk.byteVector(g(e)))
-    def outputBytesE(f: Either[Throwable, A] => ByteVector)(using RaiseThrowable[F]): BytePullState[F, Byte, S, A] =
-      state.pullStateOutputE(either => Chunk.byteVector(f(either)))
+    def output(f: A => Chunk[O]): BytePullState[F, S, E, A] =
+      state.pullStateOutput(f)
+    def outputL(f: E => Chunk[O]): BytePullState[F, S, E, A] =
+      state.pullStateOutputL(f)
   end extension
 end BytePullState
