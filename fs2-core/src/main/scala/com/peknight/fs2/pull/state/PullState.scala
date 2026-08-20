@@ -9,8 +9,8 @@ import fs2.{Chunk, Pull, RaiseThrowable, Stream}
 import java.io.EOFException
 
 object PullState:
-  def apply[F[_], I, O, S, A](f: ((S, Stream[F, I])) => Pull[F, O, ((S, Stream[F, I]), A)]): PullState[F, I, O, S, A] =
-    StateT(f)
+  def apply[F[_], I, O, S, A](f: (S, Stream[F, I]) => Pull[F, O, ((S, Stream[F, I]), A)]): PullState[F, I, O, S, A] =
+    StateT(f.tupled)
 
   def pure[F[_], I, O, S, A](a: A): PullState[F, I, O, S, A] = StateT.pure(a)
 

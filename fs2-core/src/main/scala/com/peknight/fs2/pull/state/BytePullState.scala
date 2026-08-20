@@ -10,8 +10,8 @@ import java.io.EOFException
 import java.nio.charset.Charset
 
 object BytePullState:
-  def apply[F[_], O, S, A](f: ((S, Stream[F, Byte])) => Pull[F, O, ((S, Stream[F, Byte]), A)]): BytePullState[F, O, S, A] =
-    StateT(f)
+  def apply[F[_], O, S, A](f: (S, Stream[F, Byte]) => Pull[F, O, ((S, Stream[F, Byte]), A)]): BytePullState[F, O, S, A] =
+    StateT(f.tupled)
 
   def pure[F[_], O, S, A](a: A): BytePullState[F, O, S, A] = StateT.pure(a)
 
