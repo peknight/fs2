@@ -5,7 +5,6 @@ import com.peknight.cats.instances.eitherT.given
 import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Stream.ToPull
 import fs2.{Chunk, Pull, Stream}
-import scodec.bits.ByteVector
 
 import java.nio.charset.Charset
 
