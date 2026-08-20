@@ -1,7 +1,5 @@
 package com.peknight.fs2.pull.state
 
-import cats.data.StateT
-import com.peknight.cats.instances.eitherT.given
 import com.peknight.fs2.pull.state.ByteInPullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Stream.ToPull
 import fs2.{Chunk, Pull, Stream}
@@ -12,11 +10,11 @@ import java.nio.charset.Charset
 object BytePullState:
   def apply[F[_], S, E, A](f: (S, Stream[F, Byte]) => Pull[F, Byte, Either[E, ((S, Stream[F, Byte]), A)]])
   : BytePullState[F, S, E, A] =
-    StateT(f.tupled)
+    ByteInPullState[F, Byte, S, E, A](f)
 
-  def pure[F[_], S, E, A](a: A): BytePullState[F, S, E, A] = StateT.pure(a)
+  def pure[F[_], S, E, A](a: A): BytePullState[F, S, E, A] = ByteInPullState.pure[F, Byte, S, E, A](a)
 
-  def unit[F[_], S, E]: BytePullState[F, S, E, Unit] = pure[F, S, E, Unit](())
+  def unit[F[_], S, E]: BytePullState[F, S, E, Unit] = ByteInPullState.unit[F, Byte, S, E]
 
   def get[F[_], S, E]: BytePullState[F, S, E, S] = ByteInPullState.get[F, Byte, S, E]
 
