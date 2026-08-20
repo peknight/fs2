@@ -36,7 +36,7 @@ object BytePullState:
   def output1[F[_], O, S](o: O): BytePullState[F, O, S, Unit] = PullState.output1[F, Byte, O, S](o)
 
   def pull[F[_]: RaiseThrowable, O, S, A](f: ToPull[F, Byte] => Pull[F, O, Option[(A, Stream[F, Byte])]])
-                                         (eof: => Throwable): BytePullState[F, O, S, A] =
+                                         (eof: => Throwable = new EOFException()): BytePullState[F, O, S, A] =
     PullState.pull[F, Byte, O, S, A](f)(eof)
 
   def map[F[_]: RaiseThrowable, I, O, S, A](f: ToPull[F, Byte] => Pull[F, O, Option[(I, Stream[F, Byte])]])
