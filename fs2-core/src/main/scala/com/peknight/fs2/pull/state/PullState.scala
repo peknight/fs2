@@ -78,7 +78,7 @@ object PullState:
   extension [F[_], I, O, S, A] (state: PullState[F, I, O, S, A])
     def attempt: PullState[F, I, O, S, Either[Throwable, A]] =
       apply((s, stream) => state.run((s, stream)).attempt.flatMap {
-        case Right((tail, value)) => Pull.pure((tail, value.asRight[Throwable]))
+        case Right((s, value)) => Pull.pure((s, value.asRight[Throwable]))
         case Left(error) => Pull.pure(((s, stream), error.asLeft[A]))
       })
     def output(f: A => Chunk[O])(g: Throwable => Chunk[O])(using RaiseThrowable[F]): PullState[F, I, O, S, A] =
