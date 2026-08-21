@@ -1,5 +1,6 @@
 package com.peknight.fs2.pull.state
 
+import cats.data.StateT
 import com.peknight.cats.instances.eitherT.given
 import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Stream.ToPull
@@ -17,7 +18,11 @@ object ByteInPullState:
 
   def unit[F[_], O, S, E]: ByteInPullState[F, O, S, E, Unit] = PullState.unit[F, Byte, O, S, E]
 
-  def get[F[_], O, S, E]: ByteInPullState[F, O, S, E, S] = PullState.get[F, Byte, O, S, E]
+  def get[F[_], O, S, E]: ByteInPullState[F, O, S, E, (S, Stream[F, Byte])] = PullState.get[F, Byte, O, S, E]
+
+  def getS[F[_], O, S, E]: ByteInPullState[F, O, S, E, S] = PullState.getS[F, Byte, O, S, E]
+
+  def setS[F[_], O, S, E](s: S): ByteInPullState[F, O, S, E, Unit] = PullState.setS[F, Byte, O, S, E](s)
 
   def liftPE[F[_], O, S, E, A](pull: Pull[F, O, Either[E, A]]): ByteInPullState[F, O, S, E, A] =
     PullState.liftPE[F, Byte, O, S, E, A](pull)

@@ -18,8 +18,18 @@ object PullState:
 
   def unit[F[_], I, O, S, E]: PullState[F, I, O, S, E, Unit] = pure[F, I, O, S, E, Unit](())
 
-  def get[F[_], I, O, S, E]: PullState[F, I, O, S, E, S] =
-    StateT.get[[X] =>> Pull[F, O, Either[E, X]], (S, Stream[F, I])].map(_._1)
+  def get[F[_], I, O, S, E]: PullState[F, I, O, S, E, (S, Stream[F, I])] =
+    StateT.get[[X] =>> Pull[F, O, Either[E, X]], (S, Stream[F, I])]
+
+  def getS[F[_], I, O, S, E]: PullState[F, I, O, S, E, S] =
+    get[F, I, O, S, E].map(_._1)
+
+  def setS[F[_], I, O, S, E](s: S): PullState[F, I, O, S, E, Unit] =
+    for
+      (_, stream) <- get[F, I, O, S, E]
+      _ <- StateT.set[[X] =>> Pull[F, O, Either[E, X]], (S, Stream[F, I])]((s, stream))
+    yield
+      ()
 
   def liftPE[F[_], I, O, S, E, A](pull: Pull[F, O, Either[E, A]]): PullState[F, I, O, S, E, A] = StateT.liftF(pull)
   def liftP[F[_], I, O, S, E, A](pull: Pull[F, O, A]): PullState[F, I, O, S, E, A] = liftPE(pull.map(_.asRight[E]))
@@ -42,7 +52,7 @@ object PullState:
   : PullState[F, I, O, S, E, A] =
     liftP[F, I, O, S, E, Either[Throwable, A]](pull).flatMap {
       case Right(a) => pure(a)
-      case Left(e) => get[F, I, O, S, E].flatMap(state => liftL(error(state, e)))
+      case Left(e) => getS[F, I, O, S, E].flatMap(state => liftL(error(state, e)))
     }
   def liftPLT[F[_], I, O, S, E, A](pull: Pull[F, O, Throwable])(error: (S, Throwable) => E)
   : PullState[F, I, O, S, E, A] =
@@ -68,7 +78,7 @@ object PullState:
     liftP[F, I, O, S, E, Unit](Pull.output1[F, O](o))
 
   def typedS[F[_], I, O, S, E, A: ClassTag](f: S => Throwable)(error: (S, Throwable) => E): PullState[F, I, O, S, E, A] =
-    get[F, I, O, S, E].flatMap {
+    getS[F, I, O, S, E].flatMap {
       case a: A => pure[F, I, O, S, E, A](a)
       case s => liftT[F, I, O, S, E, A](f(s))(error)
     }

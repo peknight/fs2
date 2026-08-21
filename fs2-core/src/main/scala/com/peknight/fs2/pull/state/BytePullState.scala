@@ -17,7 +17,11 @@ object BytePullState:
 
   def unit[F[_], S, E]: BytePullState[F, S, E, Unit] = ByteInPullState.unit[F, Byte, S, E]
 
-  def get[F[_], S, E]: BytePullState[F, S, E, S] = ByteInPullState.get[F, Byte, S, E]
+  def get[F[_], S, E]: BytePullState[F, S, E, (S, Stream[F, Byte])] = ByteInPullState.get[F, Byte, S, E]
+
+  def getS[F[_], S, E]: BytePullState[F, S, E, S] = ByteInPullState.getS[F, Byte, S, E]
+
+  def setS[F[_], S, E](s: S): BytePullState[F, S, E, Unit] = ByteInPullState.setS[F, Byte, S, E](s)
 
   def liftPE[F[_], S, E, A](pull: Pull[F, Byte, Either[E, A]]): BytePullState[F, S, E, A] =
     ByteInPullState.liftPE[F, Byte, S, E, A](pull)
