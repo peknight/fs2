@@ -5,7 +5,7 @@ import cats.syntax.either.*
 import cats.syntax.functor.*
 import com.peknight.cats.instances.eitherT.given
 import fs2.Stream.ToPull
-import fs2.{Chunk, Pull, Stream}
+import fs2.{Chunk, Pipe, Pull, Stream}
 
 import scala.reflect.ClassTag
 
@@ -76,6 +76,9 @@ object PullState:
 
   def output1[F[_], I, O, S, E](o: O): PullState[F, I, O, S, E, Unit] =
     liftP[F, I, O, S, E, Unit](Pull.output1[F, O](o))
+
+  def pipe[F[_], I, O, S, E](pipe: Pipe[F, I, O]): PullState[F, I, O, S, E, Unit] =
+    apply((state, stream) => stream.through(pipe).pull.echo.as(((state, Stream.empty), ()).asRight[E]))
 
   def typed[F[_], I, O, S, E, A, B: ClassTag](a: A)(f: (S, A) => E): PullState[F, I, O, S, E, B] =
     a match

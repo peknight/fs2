@@ -4,7 +4,7 @@ import cats.data.StateT
 import com.peknight.cats.instances.eitherT.given
 import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Stream.ToPull
-import fs2.{Chunk, Pull, Stream}
+import fs2.{Chunk, Pipe, Pull, Stream}
 
 import java.nio.charset.Charset
 import scala.reflect.ClassTag
@@ -65,6 +65,9 @@ object ByteInPullState:
   def output[F[_], O, S, E](os: O*): ByteInPullState[F, O, S, E, Unit] = PullState.output[F, Byte, O, S, E](os*)
 
   def output1[F[_], O, S, E](o: O): ByteInPullState[F, O, S, E, Unit] = PullState.output1[F, Byte, O, S, E](o)
+
+  def pipe[F[_], O, S, E](pipe: Pipe[F, Byte, O]): ByteInPullState[F, O, S, E, Unit] =
+    PullState.pipe[F, Byte, O, S, E](pipe)
 
   def typed[F[_], O, S, E, A, B: ClassTag](a: A)(f: (S, A) => E): ByteInPullState[F, O, S, E, B] =
     PullState.typed[F, Byte, O, S, E, A, B](a)(f)

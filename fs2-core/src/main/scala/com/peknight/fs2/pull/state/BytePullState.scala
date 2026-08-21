@@ -2,7 +2,7 @@ package com.peknight.fs2.pull.state
 
 import com.peknight.fs2.pull.state.ByteInPullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Stream.ToPull
-import fs2.{Chunk, Pull, Stream}
+import fs2.{Chunk, Pipe, Pull, Stream}
 import scodec.bits.ByteVector
 
 import java.nio.charset.Charset
@@ -67,6 +67,9 @@ object BytePullState:
     ByteInPullState.output[F, Byte, S, E](Chunk.byteVector(bytes))
 
   def output1[F[_], S, E](o: Byte): BytePullState[F, S, E, Unit] = ByteInPullState.output1[F, Byte, S, E](o)
+
+  def pipe[F[_], S, E](pipe: Pipe[F, Byte, Byte]): BytePullState[F, S, E, Unit] =
+    ByteInPullState.pipe[F, Byte, S, E](pipe)
 
   def typed[F[_], S, E, A, B: ClassTag](a: A)(f: (S, A) => E): BytePullState[F, S, E, B] =
     ByteInPullState.typed[F, Byte, S, E, A, B](a)(f)
