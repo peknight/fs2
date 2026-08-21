@@ -68,8 +68,11 @@ object BytePullState:
 
   def output1[F[_], S, E](o: Byte): BytePullState[F, S, E, Unit] = ByteInPullState.output1[F, Byte, S, E](o)
 
-  def typedS[F[_], S, E, A: ClassTag](f: S => Throwable)(error: (S, Throwable) => E): BytePullState[F, S, E, A] =
-    ByteInPullState.typedS[F, Byte, S, E, A](f)(error)
+  def typed[F[_], S, E, A, B: ClassTag](a: A)(f: (S, A) => E): BytePullState[F, S, E, B] =
+    ByteInPullState.typed[F, Byte, S, E, A, B](a)(f)
+
+  def typedS[F[_], S, E, A: ClassTag](f: S => E): BytePullState[F, S, E, A] =
+    ByteInPullState.typedS[F, Byte, S, E, A](f)
 
   def pull[F[_], S, E, A](f: ToPull[F, Byte] => Pull[F, Byte, Option[(A, Stream[F, Byte])]])
                          (eof: S => E): BytePullState[F, S, E, A] =

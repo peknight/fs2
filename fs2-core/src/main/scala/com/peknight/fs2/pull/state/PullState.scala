@@ -77,10 +77,15 @@ object PullState:
   def output1[F[_], I, O, S, E](o: O): PullState[F, I, O, S, E, Unit] =
     liftP[F, I, O, S, E, Unit](Pull.output1[F, O](o))
 
-  def typedS[F[_], I, O, S, E, A: ClassTag](f: S => Throwable)(error: (S, Throwable) => E): PullState[F, I, O, S, E, A] =
+  def typed[F[_], I, O, S, E, A, B: ClassTag](a: A)(f: (S, A) => E): PullState[F, I, O, S, E, B] =
+    a match
+      case b: B => pure[F, I, O, S, E, B](b)
+      case a => getS[F, I, O, S, E].flatMap(s => liftL[F, I, O, S, E, B](f(s, a)))
+
+  def typedS[F[_], I, O, S, E, A: ClassTag](f: S => E): PullState[F, I, O, S, E, A] =
     getS[F, I, O, S, E].flatMap {
       case a: A => pure[F, I, O, S, E, A](a)
-      case s => liftT[F, I, O, S, E, A](f(s))(error)
+      case s => liftL[F, I, O, S, E, A](f(s))
     }
 
   def pull[F[_], I, O, S, E, A](f: ToPull[F, I] => Pull[F, O, Option[(A, Stream[F, I])]])(eof: S => E)
