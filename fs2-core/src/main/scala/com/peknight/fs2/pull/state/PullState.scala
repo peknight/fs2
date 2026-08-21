@@ -7,6 +7,8 @@ import com.peknight.cats.instances.eitherT.given
 import fs2.Stream.ToPull
 import fs2.{Chunk, Pull, Stream}
 
+import scala.reflect.ClassTag
+
 object PullState:
   def apply[F[_], I, O, S, E, A](f: (S, Stream[F, I]) => Pull[F, O, Either[E, ((S, Stream[F, I]), A)]])
   : PullState[F, I, O, S, E, A] =
@@ -64,6 +66,12 @@ object PullState:
 
   def output1[F[_], I, O, S, E](o: O): PullState[F, I, O, S, E, Unit] =
     liftP[F, I, O, S, E, Unit](Pull.output1[F, O](o))
+
+  def typedS[F[_], I, O, S, E, A: ClassTag](f: S => Throwable)(error: (S, Throwable) => E): PullState[F, I, O, S, E, A] =
+    get[F, I, O, S, E].flatMap {
+      case a: A => pure[F, I, O, S, E, A](a)
+      case s => liftT[F, I, O, S, E, A](f(s))(error)
+    }
 
   def pull[F[_], I, O, S, E, A](f: ToPull[F, I] => Pull[F, O, Option[(A, Stream[F, I])]])(eof: S => E)
   : PullState[F, I, O, S, E, A] =

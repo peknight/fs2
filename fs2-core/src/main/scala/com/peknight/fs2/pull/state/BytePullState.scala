@@ -6,6 +6,7 @@ import fs2.{Chunk, Pull, Stream}
 import scodec.bits.ByteVector
 
 import java.nio.charset.Charset
+import scala.reflect.ClassTag
 
 object BytePullState:
   def apply[F[_], S, E, A](f: (S, Stream[F, Byte]) => Pull[F, Byte, Either[E, ((S, Stream[F, Byte]), A)]])
@@ -62,6 +63,9 @@ object BytePullState:
     ByteInPullState.output[F, Byte, S, E](Chunk.byteVector(bytes))
 
   def output1[F[_], S, E](o: Byte): BytePullState[F, S, E, Unit] = ByteInPullState.output1[F, Byte, S, E](o)
+
+  def typedS[F[_], S, E, A: ClassTag](f: S => Throwable)(error: (S, Throwable) => E): BytePullState[F, S, E, A] =
+    ByteInPullState.typedS[F, Byte, S, E, A](f)(error)
 
   def pull[F[_], S, E, A](f: ToPull[F, Byte] => Pull[F, Byte, Option[(A, Stream[F, Byte])]])
                          (eof: S => E): BytePullState[F, S, E, A] =

@@ -6,6 +6,7 @@ import fs2.Stream.ToPull
 import fs2.{Chunk, Pull, Stream}
 
 import java.nio.charset.Charset
+import scala.reflect.ClassTag
 
 object ByteInPullState:
   def apply[F[_], O, S, E, A](f: (S, Stream[F, Byte]) => Pull[F, O, Either[E, ((S, Stream[F, Byte]), A)]])
@@ -59,6 +60,9 @@ object ByteInPullState:
   def output[F[_], O, S, E](os: O*): ByteInPullState[F, O, S, E, Unit] = PullState.output[F, Byte, O, S, E](os*)
 
   def output1[F[_], O, S, E](o: O): ByteInPullState[F, O, S, E, Unit] = PullState.output1[F, Byte, O, S, E](o)
+
+  def typedS[F[_], O, S, E, A: ClassTag](f: S => Throwable)(error: (S, Throwable) => E): ByteInPullState[F, O, S, E, A] =
+    PullState.typedS[F, Byte, O, S, E, A](f)(error)
 
   def pull[F[_], O, S, E, A](f: ToPull[F, Byte] => Pull[F, O, Option[(A, Stream[F, Byte])]])
                             (eof: S => E): ByteInPullState[F, O, S, E, A] =
