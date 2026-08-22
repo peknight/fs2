@@ -1,6 +1,5 @@
 package com.peknight.fs2.pull.state
 
-import cats.data.StateT
 import com.peknight.cats.instances.eitherT.given
 import com.peknight.fs2.pull.state.PullState.{attempt as pullStateAttempt, output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Stream.ToPull
@@ -107,7 +106,8 @@ object ByteInPullState:
   def readSizedBytes[F[_], O, S, E](eof: S => E): ByteInPullState[F, O, S, E, Chunk[Byte]] =
     for
       n <- pull[F, O, S, E, Byte](_.uncons1)(eof)
-      chunk <- pull[F, O, S, E, Chunk[Byte]](_.unconsN(n))(eof)
+      // SOCKS5 等协议的长度字段是 unsigned byte，这里必须做无符号拓宽（0-255），否则 128-255 会作为负数传给 unconsN
+      chunk <- pull[F, O, S, E, Chunk[Byte]](_.unconsN(n & 0xFF))(eof)
     yield
       chunk
 
