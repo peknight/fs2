@@ -14,37 +14,37 @@ import scala.reflect.ClassTag
  *
  * `F[_]` 与返回值 `A` 仍保留在各方法上，因此调用处既能写出 `dsl.getS[F]` 这样的短签名，
  * 又不丢失 [[PullState]] 六泛型在底层的全部灵活性。新增协议/流形态时：
- *   - 字节输入、自由输出：继承 [[ByteInPullStateDsl]]
+ *   - 字节输入、自由输出：继承 [[ByteInputPullStateDsl]]
  *   - 字节输入、字节输出：继承 [[BytePullStateDsl]]
  *   - 其它 `I/O`：直接继承本类
  *
  * 所有构造逻辑直接在本类中实现，不再转发到独立的 `object PullState`；
  * 需要六泛型完全开放的场景时，`new PullStateDsl[I, O, S, E] {}` 即可获得同一套 API。
  */
-abstract class PullStateDsl[I, O, S, E]:
+trait PullStateDsl[I, O, S, E]:
 
   /** 特化后的 StateT 类型；叶子 object 可再将其 type alias 成协议自有的 `XxxPullState[F, A]`。 */
   final type PS[F[_], A] = PullState[F, I, O, S, E, A]
 
-  private type M[F[_]] = [X] =>> Pull[F, O, Either[E, X]]
-  private type St[F[_]] = (S, Stream[F, I])
+  private type P[F[_]] = [X] =>> Pull[F, O, Either[E, X]]
+  private type ST[F[_]] = (S, Stream[F, I])
 
   def apply[F[_], A](f: (S, Stream[F, I]) => Pull[F, O, Either[E, ((S, Stream[F, I]), A)]])
   : PS[F, A] =
-    StateT[M[F], St[F], A](f.tupled)
+    StateT[P[F], ST[F], A](f.tupled)
 
-  def pure[F[_], A](a: A): PS[F, A] = StateT.pure[M[F], St[F], A](a)
+  def pure[F[_], A](a: A): PS[F, A] = StateT.pure[P[F], ST[F], A](a)
 
   def unit[F[_]]: PS[F, Unit] = pure(())
 
-  def get[F[_]]: PS[F, St[F]] = StateT.get[M[F], St[F]]
+  def get[F[_]]: PS[F, ST[F]] = StateT.get[P[F], ST[F]]
 
   def getS[F[_]]: PS[F, S] = get.map(_._1)
 
   def setS[F[_]](s: S): PS[F, Unit] =
     for
       (_, stream) <- get
-      _ <- StateT.set[M[F], St[F]]((s, stream))
+      _ <- StateT.set[P[F], ST[F]]((s, stream))
     yield
       ()
 

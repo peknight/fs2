@@ -11,7 +11,7 @@ import java.nio.charset.Charset
  * 承载只依赖"从字节流读取"的组合子（`readSized*` 等），因此"字节进、帧/对象出"的纯解码协议
  * 也可直接复用本层，无需把输出也约束成 `Byte`。
  */
-abstract class ByteInPullStateDsl[O, S, E] extends PullStateDsl[Byte, O, S, E]:
+trait ByteInputPullStateDsl[O, S, E] extends PullStateDsl[Byte, O, S, E]:
 
   /**
    * 先读一个长度字节，再按其无符号值读取对应长度的字节块。
@@ -52,4 +52,4 @@ abstract class ByteInPullStateDsl[O, S, E] extends PullStateDsl[Byte, O, S, E]:
       value <- liftET(f(value))(error)
     yield
       value
-end ByteInPullStateDsl
+end ByteInputPullStateDsl
