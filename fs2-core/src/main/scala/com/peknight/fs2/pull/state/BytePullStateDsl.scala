@@ -1,6 +1,5 @@
 package com.peknight.fs2.pull.state
 
-import com.peknight.fs2.pull.state.PullState.{output as pullStateOutput, outputE as pullStateOutputE, outputL as pullStateOutputL}
 import fs2.Chunk
 import scodec.bits.ByteVector
 
@@ -20,12 +19,12 @@ abstract class BytePullStateDsl[S, E] extends ByteInPullStateDsl[Byte, S, E]:
   extension [F[_], A] (state: PS[F, A])
     @targetName("outputEByteVector")
     def outputE(f: Either[E, A] => ByteVector): PS[F, A] =
-      state.pullStateOutputE(f.andThen(Chunk.byteVector))
+      super.outputE(state)(f.andThen(Chunk.byteVector))
     @targetName("outputByteVector")
     def output(f: A => ByteVector): PS[F, A] =
-      state.pullStateOutput(f.andThen(Chunk.byteVector))
+      super.output(state)(f.andThen(Chunk.byteVector))
     @targetName("outputLByteVector")
     def outputL(f: E => ByteVector): PS[F, A] =
-      state.pullStateOutputL(f.andThen(Chunk.byteVector))
+      super.outputL(state)(f.andThen(Chunk.byteVector))
   end extension
 end BytePullStateDsl
