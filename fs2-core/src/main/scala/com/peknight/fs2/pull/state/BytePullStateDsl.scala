@@ -14,17 +14,17 @@ import scala.annotation.targetName
  */
 trait BytePullStateDsl[S, E] extends ByteInputPullStateDsl[Byte, S, E]:
 
-  def output[F[_]](bytes: ByteVector): PS[F, Unit] = output(Chunk.byteVector(bytes))
+  def output[F[_]](bytes: ByteVector): AUX[F, Unit] = output(Chunk.byteVector(bytes))
 
-  extension [F[_], A] (state: PS[F, A])
+  extension [F[_], A] (state: AUX[F, A])
     @targetName("outputEByteVector")
-    def outputE(f: Either[E, A] => ByteVector): PS[F, A] =
+    def outputE(f: Either[E, A] => ByteVector): AUX[F, A] =
       super.outputE(state)(f.andThen(Chunk.byteVector))
     @targetName("outputByteVector")
-    def output(f: A => ByteVector): PS[F, A] =
+    def output(f: A => ByteVector): AUX[F, A] =
       super.output(state)(f.andThen(Chunk.byteVector))
     @targetName("outputLByteVector")
-    def outputL(f: E => ByteVector): PS[F, A] =
+    def outputL(f: E => ByteVector): AUX[F, A] =
       super.outputL(state)(f.andThen(Chunk.byteVector))
   end extension
 end BytePullStateDsl
