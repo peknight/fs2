@@ -12,21 +12,21 @@ import java.nio.charset.Charset
 trait ByteInPullStateErrorDsl[O, S, E]
   extends ByteInputPullStateDsl[O, S, E] with PullStateErrorDsl[Byte, O, S, E]:
 
-  def readSizedBytes[F[_]](eof: => Throwable): AUX[F, Chunk[Byte]] =
+  def readSizedBytes[F[_]](eof: => Throwable): Aux[F, Chunk[Byte]] =
     super.readSizedBytes(s => error(s, eof))
 
-  def mapSizedBytes[F[_], A](f: Chunk[Byte] => A)(eof: => Throwable): AUX[F, A] =
+  def mapSizedBytes[F[_], A](f: Chunk[Byte] => A)(eof: => Throwable): Aux[F, A] =
     super.mapSizedBytes(f)(s => error(s, eof))
 
-  def parseSizedBytes[F[_], A](f: Chunk[Byte] => Either[Throwable, A])(eof: => Throwable): AUX[F, A] =
+  def parseSizedBytes[F[_], A](f: Chunk[Byte] => Either[Throwable, A])(eof: => Throwable): Aux[F, A] =
     super.parseSizedBytes(f)(error)(s => error(s, eof))
 
-  def readSizedString[F[_]](eof: => Throwable)(using Charset): AUX[F, String] =
+  def readSizedString[F[_]](eof: => Throwable)(using Charset): Aux[F, String] =
     super.readSizedString(error)(s => error(s, eof))
 
-  def mapSizedString[F[_], A](f: String => A)(eof: => Throwable)(using Charset): AUX[F, A] =
+  def mapSizedString[F[_], A](f: String => A)(eof: => Throwable)(using Charset): Aux[F, A] =
     super.mapSizedString(f)(error)(s => error(s, eof))
 
-  def parseSizedString[F[_], A](f: String => Either[Throwable, A])(eof: => Throwable)(using Charset): AUX[F, A] =
+  def parseSizedString[F[_], A](f: String => Either[Throwable, A])(eof: => Throwable)(using Charset): Aux[F, A] =
     super.parseSizedString(f)(error)(s => error(s, eof))
 end ByteInPullStateErrorDsl

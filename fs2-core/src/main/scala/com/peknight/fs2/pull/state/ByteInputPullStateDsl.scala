@@ -18,18 +18,18 @@ trait ByteInputPullStateDsl[O, S, E] extends PullStateDsl[Byte, O, S, E]:
    * SOCKS5 等协议的长度字段是 unsigned byte，必须做无符号拓宽（0-255），
    * 否则 128-255 会作为负数传给 `unconsN`。
    */
-  def readSizedBytes[F[_]](eof: S => E): AUX[F, Chunk[Byte]] =
+  def readSizedBytes[F[_]](eof: S => E): Aux[F, Chunk[Byte]] =
     for
       n <- pull[F, Byte](_.uncons1)(eof)
       chunk <- pull[F, Chunk[Byte]](_.unconsN(n & 0xFF))(eof)
     yield
       chunk
 
-  def mapSizedBytes[F[_], A](f: Chunk[Byte] => A)(eof: S => E): AUX[F, A] =
+  def mapSizedBytes[F[_], A](f: Chunk[Byte] => A)(eof: S => E): Aux[F, A] =
     readSizedBytes(eof).map(f)
 
   def parseSizedBytes[F[_], A](f: Chunk[Byte] => Either[Throwable, A])
-                              (error: (S, Throwable) => E)(eof: S => E): AUX[F, A] =
+                              (error: (S, Throwable) => E)(eof: S => E): Aux[F, A] =
     for
       chunk <- readSizedBytes(eof)
       value <- liftET(f(chunk))(error)
@@ -37,16 +37,16 @@ trait ByteInputPullStateDsl[O, S, E] extends PullStateDsl[Byte, O, S, E]:
       value
 
   def readSizedString[F[_]](error: (S, Throwable) => E)(eof: S => E)(using Charset)
-  : AUX[F, String] =
+  : Aux[F, String] =
     parseSizedBytes[F, String](_.toByteVector.decodeString)(error)(eof)
 
   def mapSizedString[F[_], A](f: String => A)(error: (S, Throwable) => E)(eof: S => E)(using Charset)
-  : AUX[F, A] =
+  : Aux[F, A] =
     readSizedString(error)(eof).map(f)
 
   def parseSizedString[F[_], A](f: String => Either[Throwable, A])
                                (error: (S, Throwable) => E)(eof: S => E)(using Charset)
-  : AUX[F, A] =
+  : Aux[F, A] =
     for
       value <- readSizedString(error)(eof)
       value <- liftET(f(value))(error)
